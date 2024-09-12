@@ -6,15 +6,28 @@ let db = new Map();
 let id = 1;
 
 router
-  .route("/channels")
+  .route("/")
   .get((req, res) => {
     // 채널 전체 조회
     if (db.size) {
       let channels = [];
-      db.forEach((val, key) => {
-        channels.push(val);
-      });
-      res.status(200).json(channels);
+      let { userId } = req.body;
+      if (userId) {
+        db.forEach((val, key) => {
+          if (val.userId === userId) channels.push(val);
+        });
+        if (channels.length) {
+          res.status(200).json(channels);
+        } else {
+          res.status(404).json({
+            message: "조회할 채널이 없습니다.",
+          });
+        }
+      } else {
+        res.status(404).json({
+          message: "로그인이 필요합니다.",
+        });
+      }
     } else {
       res.status(404).json({
         message: "조회할 채널이 없습니다.",
@@ -24,7 +37,8 @@ router
   .post((req, res) => {
     // 채널 개별 생성
     if (req.body.channelTitle) {
-      db.set(id++, req.body);
+      let channel = req.body;
+      db.set(id++, channel);
       res.status(201).json({
         message: `${db.get(id - 1).channelTitle}채널을 응원합니다.`,
       });
@@ -36,7 +50,7 @@ router
   });
 
 router
-  .route("/channels/:id")
+  .route("/:id")
   .put((req, res) => {
     // 채널 개별 수정
     let { id } = req.params;
