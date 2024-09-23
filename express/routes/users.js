@@ -4,45 +4,34 @@ const router = express.Router();
 router.use(express.json());
 
 // 로그인
-function Exists(obj) {
-  if (Object.keys(loginUser).length) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 router.post("/login", (req, res) => {
-  const { userId, password } = req.body;
-  let loginUser = {};
+  const { email, password } = req.body;
+  let sql = `SELECT * FROM users WHERE email = ?`;
+  let values = [email];
 
-  db.forEach((user) => {
-    if (user.userId === userId) {
-      loginUser = user;
-    }
-  });
-  if (Exists(loginUser)) {
-    if (loginUser.password === password) {
-      res.json({
+  conn.query(sql, values, (err, results) => {
+    let loginUser = results[0];
+
+    if (loginUser && loginUser.password === password) {
+      res.status(200).json({
         message: `${loginUser.name}님, 로그인 되었습니다.`,
       });
     } else {
-      res.json({
-        message: "틀린 비밀번호입니다.",
+      res.status(404).json({
+        message: "아이디 또는 비밀번호가 틀렸습니다.",
       });
     }
-  } else {
-    res.json({
-      message: "없는 아이디입니다.",
-    });
-  }
+  });
 });
 // 회원가입
 router.post("/join", (req, res) => {
   if (req.body != {}) {
-    db.set(id++, req.body);
-    res.status(201).json({
-      message: `${db.get(id - 1).name}님 환영합니다.`,
+    const { email, name, password, contact } = req.body;
+    let sql = `INSERT INTO users (email, name, password, contact) VALUES (?, ?, ?, ?)`;
+    let values = [email, name, password, contact];
+
+    conn.query(sql, values, (err, results, fields) => {
+      res.status(201).json(results);
     });
   } else {
     res.status(400).json({
@@ -55,34 +44,25 @@ router
   .route("/users")
   .get((req, res) => {
     let { email } = req.body;
-
-    conn.query(
-      `SELECT * FROM users WHERE email = ?`,
-      email,
-      function (err, results, fields) {
-        if (results.length) {
-          res.status(200).json(results);
-        } else {
-          res.status(404).json({
-            message: "회원 정보가 없습니다.",
-          });
-        }
+    let sql = `SELECT * FROM users WHERE email = ?`;
+    let values = [email];
+    conn.query(sql, values, (err, results) => {
+      if (results.length) {
+        res.status(200).json(results);
+      } else {
+        res.status(404).json({
+          message: "회원 정보가 없습니다.",
+        });
       }
-    );
+    });
   })
   .delete((req, res) => {
-    let { userId } = req.body;
-
-    if (user) {
-      db.delete(id);
-      res.status(200).json({
-        message: `${user.name}님 잘가요.`,
-      });
-    } else {
-      res.status(404).json({
-        message: "회원 정보가 없습니다.",
-      });
-    }
+    let { email } = req.body;
+    let sql = `DELETE FROM users WHERE email = ?`;
+    let values = [email];
+    conn.query(sql, values, (err, results) => {
+      res.status(200).json(results);
+    });
   });
 
 export default router;

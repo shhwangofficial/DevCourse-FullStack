@@ -1,8 +1,9 @@
-POST http://localhost:3000/join HTTP/1.1
-Content-Type: application/json; charset=UTF-8
+POST http://localhost:3000/join
+Content-Type: application/json
 
 {
-  "userId": "testId2",
-  "password": "1234",
-  "name": "tester2"
+  "email": "spaceX@mail.com",
+  "name": "elon",
+  "password" : "4445",
+  "contact" : "010-9999-9999"
 }
