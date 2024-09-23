@@ -1,23 +1,7 @@
 import express from "express";
+import conn from "../db.js";
 const router = express.Router();
 router.use(express.json());
-import conn from "../db.js";
-
-conn.query(
-  'SELECT * FROM `users`',
-  function(err, results, fields) {
-    if (err) {
-      console.error('Error executing query:', err);
-      return; // 오류가 발생하면 더 이상 실행하지 않음
-    }
-    console.log(results[0]);
-  }
-)
-
-
-
-let db = new Map();
-let id = 1;
 
 // 로그인
 function Exists(obj) {
@@ -66,37 +50,39 @@ router.post("/join", (req, res) => {
     });
   }
 });
-// 개별 회원 조회
-router.get("/users/:id", (req, res) => {
-  let { id } = req.params;
-  id = parseInt(id);
-  let user = db.get(id);
-  if (user) {
-    res.status(200).json({
-      userId: user.userId,
-      name: user.name,
-    });
-  } else {
-    res.status(401).json({
-      message: "회원 정보가 없습니다.",
-    });
-  }
-});
-// 개별 회원 탈퇴
-router.delete("/users/:id", (req, res) => {
-  let { id } = req.params;
-  id = parseInt(id);
-  let user = db.get(id);
-  if (user) {
-    db.delete(id);
-    res.status(200).json({
-      message: `${user.name}님 잘가요.`,
-    });
-  } else {
-    res.status(404).json({
-      message: "회원 정보가 없습니다.",
-    });
-  }
-});
+
+router
+  .route("/users")
+  .get((req, res) => {
+    let { email } = req.body;
+
+    conn.query(
+      `SELECT * FROM users WHERE email = ?`,
+      email,
+      function (err, results, fields) {
+        if (results.length) {
+          res.status(200).json(results);
+        } else {
+          res.status(404).json({
+            message: "회원 정보가 없습니다.",
+          });
+        }
+      }
+    );
+  })
+  .delete((req, res) => {
+    let { userId } = req.body;
+
+    if (user) {
+      db.delete(id);
+      res.status(200).json({
+        message: `${user.name}님 잘가요.`,
+      });
+    } else {
+      res.status(404).json({
+        message: "회원 정보가 없습니다.",
+      });
+    }
+  });
 
 export default router;
