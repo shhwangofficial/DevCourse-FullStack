@@ -1,6 +1,20 @@
 import express from "express";
 const router = express.Router();
 router.use(express.json());
+import conn from "../db.js";
+
+conn.query(
+  'SELECT * FROM `users`',
+  function(err, results, fields) {
+    if (err) {
+      console.error('Error executing query:', err);
+      return; // 오류가 발생하면 더 이상 실행하지 않음
+    }
+    console.log(results[0]);
+  }
+)
+
+
 
 let db = new Map();
 let id = 1;
