@@ -1,50 +1,42 @@
 import express from "express";
+import conn from "../db.js";
 const router = express.Router();
 router.use(express.json());
-
-let db = new Map();
-let id = 1;
 
 router
   .route("/")
   .get((req, res) => {
-    // 채널 전체 조회
-    if (db.size) {
-      let channels = [];
-      let { userId } = req.body;
-      if (userId) {
-        db.forEach((val, key) => {
-          if (val.userId === userId) channels.push(val);
-        });
-        if (channels.length) {
-          res.status(200).json(channels);
+    // 채널 전체 조회 (소유주)
+    let { userId } = req.body;
+    let sql = `SELECT * FROM channels WHERE user_id = ?`;
+    let values = userId;
+    if (userId) {
+      conn.query(sql, values, (err, results) => {
+        if (results.length) {
+          res.status(200).json(results);
         } else {
           res.status(404).json({
-            message: "조회할 채널이 없습니다.",
+            message: "채널 정보를 찾을 수 없습니다.",
           });
         }
-      } else {
-        res.status(404).json({
-          message: "로그인이 필요합니다.",
-        });
-      }
-    } else {
-      res.status(404).json({
-        message: "조회할 채널이 없습니다.",
       });
+    } else {
+      res.status(400).end();
     }
   })
   .post((req, res) => {
     // 채널 개별 생성
-    if (req.body.channelTitle) {
-      let channel = req.body;
-      db.set(id++, channel);
-      res.status(201).json({
-        message: `${db.get(id - 1).channelTitle}채널을 응원합니다.`,
+    const { name, userId } = req.body;
+    if (name && userId) {
+      let sql = `INSERT INTO channels (name, user_id) VALUES (?, ?)`;
+      let values = [name, userId];
+
+      conn.query(sql, values, (err, results, fields) => {
+        res.status(201).json(results);
       });
     } else {
       res.status(400).json({
-        message: "요청을 제대로 보내주세요.",
+        message: "입력 값을 확인하세요",
       });
     }
   });
@@ -90,14 +82,19 @@ router
     // 채널 개별 조회
     let { id } = req.params;
     id = parseInt(id);
-    let channel = db.get(id);
-    if (channel) {
-      res.status(200).json(channel);
-    } else {
-      res.status(404).json({
-        message: "채널 정보를 찾을 수 없습니다.",
-      });
-    }
+
+    let sql = `SELECT * FROM channels WHERE id = ?`;
+    let values = [id];
+
+    conn.query(sql, values, (err, results) => {
+      if (results.length) {
+        res.status(200).json(results);
+      } else {
+        res.status(404).json({
+          message: "채널 정보를 찾을 수 없습니다.",
+        });
+      }
+    });
   });
 
 export default router;
