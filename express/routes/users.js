@@ -1,6 +1,11 @@
 import express from "express";
 import conn from "../db.js";
 import { body, param, validationResult } from "express-validator";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config();
+
 const router = express.Router();
 router.use(express.json());
 
@@ -36,11 +41,27 @@ router.post(
       let loginUser = results[0];
 
       if (loginUser && loginUser.password === password) {
+        // token 발급
+        const token = jwt.sign(
+          {
+            email: loginUser.email,
+            name: loginUser.name,
+          },
+          process.env.PRIVATE_KEY, {
+            expiresIn: '1m',
+            issuer: "shhwang",
+          }
+        );
+        res.cookie("token", token, {
+          httpOnly: true,
+        }); // 토큰 헤더에 담아 발송
+
         res.status(200).json({
           message: `${loginUser.name}님, 로그인 되었습니다.`,
         });
       } else {
-        res.status(404).json({
+        res.status(403).json({
+          // 접근 불인가 forbidden
           message: "아이디 또는 비밀번호가 틀렸습니다.",
         });
       }
@@ -94,7 +115,8 @@ router
       });
     }
   )
-  .delete( // 회원 개별 삭제
+  .delete(
+    // 회원 개별 삭제
     [body("email").notEmpty().isEmail().withMessage("이메일 필요"), validation],
     (req, res) => {
       let { email } = req.body;
