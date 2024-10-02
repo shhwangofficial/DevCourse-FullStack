@@ -9,10 +9,11 @@ import orderRouter from "./routes/orders.js";
 const app = express();
 dotenv.config();
 
-app.listen(process.env.PORT);
-
 app.use("/users", userRouter);
 app.use("/books", bookRouter);
-app.use("/carts", likeRouter);
-app.use("/likes", cartRouter);
+app.use("/carts", cartRouter);
+app.use("/likes", likeRouter);
 app.use("/orders", orderRouter);
+
+console.log("PORT:", process.env.PORT);
+app.listen(process.env.PORT);
