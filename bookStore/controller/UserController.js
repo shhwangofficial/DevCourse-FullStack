@@ -10,8 +10,10 @@ const join = (req, res) => {
   const { email, password } = req.body;
 
   // 비밀번호 암호화
-  const salt = crypto.randomBytes(16).toString('base64');
-  const hashPassword = crypto.pbkdf2Sync(password, salt, 10000, 16, 'sha512').toString('base64');
+  const salt = crypto.randomBytes(16).toString("base64");
+  const hashPassword = crypto
+    .pbkdf2Sync(password, salt, 10000, 16, "sha512")
+    .toString("base64");
 
   let sql = `INSERT INTO users (email, password, salt) VALUES(?, ?, ?)`;
   let values = [email, hashPassword, salt];
@@ -35,7 +37,9 @@ const login = (req, res) => {
     }
 
     const loginUser = results[0];
-    const hashPassword = crypto.pbkdf2Sync(password, loginUser.salt, 10000, 16, 'sha512').toString('base64');
+    const hashPassword = crypto
+      .pbkdf2Sync(password, loginUser.salt, 10000, 16, "sha512")
+      .toString("base64");
 
     if (loginUser && loginUser.password == hashPassword) {
       const token = jwt.sign(
@@ -80,8 +84,10 @@ const passwordResetRequest = (req, res) => {
 const passwordReset = (req, res) => {
   const { password, email } = req.body;
 
-  const salt = crypto.randomBytes(16).toString('base64');
-  const hashPassword = crypto.pbkdf2Sync(password, salt, 10000, 16, 'sha512').toString('base64');
+  const salt = crypto.randomBytes(16).toString("base64");
+  const hashPassword = crypto
+    .pbkdf2Sync(password, salt, 10000, 16, "sha512")
+    .toString("base64");
 
   let sql = `UPDATE users SET password=?, salt=? WHERE email=?`;
   let values = [hashPassword, salt, email];
@@ -90,10 +96,10 @@ const passwordReset = (req, res) => {
       console.log(err);
       return res.status(StatusCodes.BAD_REQUEST).end();
     }
-    if(results.affectedRows == 0) {
-        return res.status(StatusCodes.BAD_REQUEST).end();
+    if (results.affectedRows == 0) {
+      return res.status(StatusCodes.BAD_REQUEST).end();
     } else {
-        return res.status(StatusCodes.OK).json(results);
+      return res.status(StatusCodes.OK).json(results);
     }
   });
 };
