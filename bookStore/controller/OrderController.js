@@ -1,68 +1,84 @@
-import conn from "../db.js";
+// import conn from "../db.js";
 import { StatusCodes } from "http-status-codes";
+import { createConnection } from "mysql2/promise";
 
-const order = (req, res) => {
+const order = async (req, res) => {
+  const conn = await createConnection({
+    host: "127.0.0.1",
+    port: 3306, // mariadb 시작시 지정한 port
+    user: "root", // mariadb 시작시 지정한 username
+    password: "root", // mariadb 시작시 지정한 password
+    database: "bookstore",
+    dateStrings: true,
+  });
   const { items, delivery, totalQuantity, totalPrice, userId, firstBookTitle } =
     req.body;
 
-  let delivery_id;
-  let order_id;
-
   let sql = `INSERT INTO delivery (address, receiver, contact) VALUES (?, ?, ?)`;
   let values = [delivery.address, delivery.receiver, delivery.contact];
-  conn.query(sql, values, (err, results) => {
-    if (err) {
-      console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).end();
-    }
-    delivery_id = results.insertId;
+  let [results] = await conn.execute(sql, values);
 
-    return res.status(StatusCodes.OK).json(results);
-  });
+  let delivery_id = results.insertId;
 
   sql = `INSERT INTO orders (book_title, total_quantity, total_price, user_id, delivery_id) VALUES (?, ?, ?, ?, ?)`;
   values = [firstBookTitle, totalQuantity, totalPrice, userId, delivery_id];
-  conn.query(sql, values, (err, results) => {
-    if (err) {
-      console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).end();
-    }
-    order_id = results.insertId;
-    return res.status(StatusCodes.OK).json(results);
-  });
+  [results] = await conn.execute(sql, values);
+
+  let order_id = results.insertId;
+
+  sql = `SELECT book_id, quantity FROM cartItems WHERE id IN (?)`;
+  let [orderItems, fields] = await conn.query(sql, [items]);
 
   sql = `INSERT INTO orderedBook (order_id, book_id, quantity) VALUES ?`;
   values = [];
-  items.forEach((item) => {
+  orderItems.forEach((item) => {
     values.push([order_id, item.book_id, item.quantity]);
   });
-  conn.query(sql, [values], (err, results) => {
-    if (err) {
-      console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).end();
-    }
-    return res.status(StatusCodes.OK).json(results);
-  });
+  results = await conn.query(sql, [values]);
+
+  let result = await deleteCartItems(conn, items);
+
+  return res.status(StatusCodes.OK).json(result);
 };
 
-const getOrders = (req, res) => {};
+const deleteCartItems = async (conn, items) => {
+  let sql = `DELETE FROM cartItems WHERE id in (?)`;
+  let result = await conn.query(sql, [items]);
+  return result;
+};
 
-const getOrderDetail = (req, res) => {};
+const getOrders = async (req, res) => {
+  const conn = await createConnection({
+    host: "127.0.0.1",
+    port: 3306, // mariadb 시작시 지정한 port
+    user: "root", // mariadb 시작시 지정한 username
+    password: "root", // mariadb 시작시 지정한 password
+    database: "bookstore",
+    dateStrings: true,
+  });
+
+  let sql = `SELECT orders.id, created_at, address, receiver, contact, book_title, total_quantity, total_price FROM orders LEFT JOIN delivery ON orders.delivery_id = delivery.id`;
+  let [rows, fields] = await conn.query(sql);
+
+  return res.status(StatusCodes.OK).json(rows);
+};
+
+const getOrderDetail = async (req, res) => {
+  const {id} = req.params;
+
+  const conn = await createConnection({
+    host: "127.0.0.1",
+    port: 3306, // mariadb 시작시 지정한 port
+    user: "root", // mariadb 시작시 지정한 username
+    password: "root", // mariadb 시작시 지정한 password
+    database: "bookstore",
+    dateStrings: true,
+  });
+
+  let sql = `SELECT book_id, title, author, price, quantity FROM orderedBook LEFT JOIN books ON orderedBook.book_id = books.id WHERE order_id = ?`;
+  let [rows, fields] = await conn.query(sql, [id]);
+
+  return res.status(StatusCodes.OK).json(rows);
+};
 
 export { order, getOrders, getOrderDetail };
-
-// // 주문하기
-// // 배송 정보 입력
-// INSERT INTO delivery (address, receiver, contact) VALUES ("서울시 중구", "김송아", "010-1234-5678");
-// const delivery_id = SELECT max(id) FROM delivery;
-
-// // 주문 정보 입력
-// INSERT INTO orders (book_title, total_quantity, total_price, user_id, delivery_id)
-// VALUES ("어린왕자들", 3, 60000, 1, delivery_id);
-// const order_id = SELECT max(id) FROM orders;
-
-// // 주문 상세 목록 입력
-// INSERT INTO orderedBook (order_id, book_id, quantity)
-// VALUES (order_id, 1, 1);
-// INSERT INTO orderedBook (order_id, book_id, quantity)
-// VALUES (order_id, 3, 2);
