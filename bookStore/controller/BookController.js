@@ -1,5 +1,7 @@
 import conn from "../db.js";
 import { StatusCodes } from "http-status-codes";
+import ensureAuthority from "../auth.js";
+import jwt from "jsonwebtoken";
 
 const allBooks = (req, res) => {
   let { category_id, news, limit, currentPage } = req.query;
@@ -33,25 +35,48 @@ const allBooks = (req, res) => {
 };
 
 const bookDetail = (req, res) => {
-  let { id: book_id } = req.params;
+  let book_id = req.params.id;
   book_id = parseInt(book_id);
-  let { user_id } = req.body;
-  let sql = `SELECT *,
+
+  let decodedJwt = ensureAuthority(req, res);
+  if (decodedJwt instanceof jwt.TokenExpiredError) {
+    return res
+      .status(StatusCodes.UNAUTHORIZED)
+      .json({ message: "로그인 세션이 만료되었습니다." });
+  } else if (decodedJwt instanceof jwt.JsonWebTokenError) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ message: "잘못된 토큰입니다." });
+  } else if (decodedJwt instanceof ReferenceError) {
+    let sql = `SELECT *,
+(SELECT count(*) FROM likes WHERE liked_book_id=books.id) AS likes
+  FROM books LEFT JOIN category ON books.category_id = category.category_id WHERE books.id = ?`;
+    let values = [book_id];
+    conn.query(sql, values, (err, results, fields) => {
+      if (err) {
+        console.log(err);
+        return res.status(StatusCodes.BAD_REQUEST).end();
+      }
+      if (results[0]) return res.status(StatusCodes.OK).json(results[0]);
+      else return res.status(StatusCodes.NOT_FOUND).end();
+    });
+  } else {
+    let sql = `SELECT *,
 (SELECT count(*) FROM likes WHERE liked_book_id=books.id) AS likes,
 (SELECT EXISTS (SELECT * FROM likes WHERE user_id=? AND liked_book_id=?)) AS liked
-  FROM books 
-  LEFT JOIN category 
+  FROM books LEFT JOIN category 
   ON books.category_id = category.category_id
    WHERE books.id = ?`;
-  let values = [user_id, book_id, book_id];
-  conn.query(sql, values, (err, results, fields) => {
-    if (err) {
-      console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).end();
-    }
-    if (results[0]) return res.status(StatusCodes.OK).json(results[0]);
-    else return res.status(StatusCodes.NOT_FOUND).end();
-  });
+    let values = [decodedJwt.id, book_id, book_id];
+    conn.query(sql, values, (err, results, fields) => {
+      if (err) {
+        console.log(err);
+        return res.status(StatusCodes.BAD_REQUEST).end();
+      }
+      if (results[0]) return res.status(StatusCodes.OK).json(results[0]);
+      else return res.status(StatusCodes.NOT_FOUND).end();
+    });
+  }
 };
 
 export { allBooks, bookDetail };
