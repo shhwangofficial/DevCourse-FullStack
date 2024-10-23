@@ -4,11 +4,12 @@ import ensureAuthority from "../auth.js";
 import jwt from "jsonwebtoken";
 
 const allBooks = (req, res) => {
+  let allBooksRes = {};
   let { category_id, news, limit, currentPage } = req.query;
   let offset = (currentPage - 1) * limit;
 
   let sql =
-    "SELECT *, (SELECT count(*) FROM likes WHERE books.id=liked_book_id) AS likes FROM books";
+    "SELECT SQL_CALC_FOUND_ROWS *, (SELECT count(*) FROM likes WHERE books.id=liked_book_id) AS likes FROM books";
   let values = [];
   if (category_id && news) {
     sql +=
@@ -24,13 +25,32 @@ const allBooks = (req, res) => {
   sql += " LIMIT ? OFFSET ?";
   values.push(parseInt(limit), offset);
 
-  conn.query(sql, values, (err, results, fields) => {
+  conn.query(sql, values, (err, results) => {
+    if (err) {
+      console.log(err);
+      // return res.status(StatusCodes.BAD_REQUEST).end();
+    }
+    if (results.length) {
+      results.map((result) => {
+        result.pubDate = result.pub_date;
+        delete result.pub_date;
+      });
+      allBooksRes.books = results;
+    } else return res.status(StatusCodes.NOT_FOUND).end();
+  });
+
+  sql = "SELECT FOUND_ROWS()";
+  conn.query(sql, (err, results) => {
     if (err) {
       console.log(err);
       return res.status(StatusCodes.BAD_REQUEST).end();
     }
-    if (results.length) return res.status(StatusCodes.OK).json(results);
-    else return res.status(StatusCodes.NOT_FOUND).end();
+
+    let pagination = {};
+    pagination.currentPage = parseInt(currentPage);
+    pagination.toatalCount = results[0]["found_rows()"];
+    allBooksRes.pagination = pagination;
+    return res.status(StatusCodes.OK).json(allBooksRes);
   });
 };
 
