@@ -1,12 +1,15 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import logo from "./logo.svg";
+import "./App.css";
+import ClassCom from "./ClassCom";
+import FuncCom from "./FuncCom";
 
 function App() {
   return (
-    <div className="App">
-      <p>반갑습니다.</p>
-    </div>
+    <>
+      <ClassCom></ClassCom>
+      <FuncCom></FuncCom>
+    </>
   );
 }
 
